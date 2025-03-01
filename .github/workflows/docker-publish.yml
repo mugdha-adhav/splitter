@@ -42,6 +42,7 @@ jobs:
             type=ref,event=pr
             type=semver,pattern={{version}},prefix=v
             type=sha,format=long
+            type=raw,value=develop,enable=${{ github.event_name == 'pull_request' }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
