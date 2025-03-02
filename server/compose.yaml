@@ -37,16 +37,16 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     network_mode: bridge
 
-  app:
-    image: ghcr.io/mugdha-adhav/splitter:latest
+  prod:
+    image: ghcr.io/mugdha-adhav/splitter:stable
     environment:
       - VIRTUAL_HOST=splitter.mriyam.com
       - LETSENCRYPT_HOST=splitter.mriyam.com
       - LETSENCRYPT_TEST=true
     network_mode: bridge
 
-  pr:
-    image: ghcr.io/mugdha-adhav/splitter:develop
+  dev:
+    image: ghcr.io/mugdha-adhav/splitter:latest
     environment:
       - VIRTUAL_HOST=dev.splitter.mriyam.com
       - LETSENCRYPT_HOST=dev.splitter.mriyam.com

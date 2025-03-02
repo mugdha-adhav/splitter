@@ -6,6 +6,9 @@ on:
       - main
     tags:
       - 'v*'
+  pull_request:
+    branches:
+      - main
 
 env:
   REGISTRY: ghcr.io
@@ -37,7 +40,7 @@ jobs:
           tags: |
             # Add latest tag only on main branch
             type=raw,value=latest,enable={{is_default_branch}}
-            # Add version tags when a Gittag is created
+            # Add version tag when a GitHub tag is created
             type=semver,pattern={{version}},prefix=v
             # Update stable tag when a GitHub tag is created
             type=semver,value=stable
