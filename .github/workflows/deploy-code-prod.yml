@@ -9,7 +9,7 @@ on:
 jobs:
   deploy-prod:
     runs-on: ubuntu-latest
-    if: github.event.workflow_run.conclusion == 'success'
+    if: github.event.workflow_run.conclusion == 'success' && contains(github.head_branch,'v*.*.*')
     steps:
       - name: Dump GitHub context
         env:
