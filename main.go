@@ -19,6 +19,10 @@ func main() {
 		w.Write([]byte("Hello world"))
 	})
 
+	http.HandleFunc("/foo", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("bar"))
+	})
+
 	server := &http.Server{
 		Addr: ":https",
 		TLSConfig: &tls.Config{
