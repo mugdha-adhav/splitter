@@ -46,7 +46,7 @@ services:
     network_mode: bridge
 
   dev:
-    image: ghcr.io/mugdha-adhav/splitter:latest
+    image: ghcr.io/mugdha-adhav/splitter:edge
     environment:
       - VIRTUAL_HOST=dev.splitter.mriyam.com
       - LETSENCRYPT_HOST=dev.splitter.mriyam.com
