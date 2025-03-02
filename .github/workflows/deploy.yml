@@ -9,7 +9,7 @@ on:
 jobs:
   deploy-dev:
     runs-on: ubuntu-latest
-    if: github.ref == "refs/heads/main"
+    if: github.ref == 'refs/heads/main'
     steps:
       - name: Install SSH key
         uses: shimataro/ssh-key-action@v2
