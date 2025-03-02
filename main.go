@@ -20,7 +20,7 @@ func main() {
 	})
 
 	http.HandleFunc("/foo", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("bar"))
+		w.Write([]byte("baz"))
 	})
 
 	server := &http.Server{
