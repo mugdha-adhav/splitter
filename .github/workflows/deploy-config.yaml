@@ -2,6 +2,8 @@ name: Deploy config to Server
 
 on:
   push:
+    branches:
+      - main
     paths:
       - server/**
 
