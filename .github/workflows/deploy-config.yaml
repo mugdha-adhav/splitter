@@ -1,0 +1,25 @@
+name: Deploy config to Server
+
+on:
+  push:
+    paths:
+      - server/**
+
+jobs:
+  deploy-config:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+      - name: Push config
+        env:
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          set -x
+          scp -r server/ $SSH_USER@$SSH_HOST:$DEPLOY_PATH/
