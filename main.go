@@ -23,6 +23,10 @@ func main() {
 		w.Write([]byte("bar"))
 	})
 
+	http.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("wip"))
+	})
+
 	server := &http.Server{
 		Addr: ":https",
 		TLSConfig: &tls.Config{
