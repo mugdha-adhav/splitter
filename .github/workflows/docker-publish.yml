@@ -6,9 +6,6 @@ on:
       - main
     tags:
       - 'v*'
-  pull_request:
-    branches:
-      - main
 
 env:
   REGISTRY: ghcr.io
@@ -40,13 +37,10 @@ jobs:
           tags: |
             # Add latest tag only on main branch
             type=raw,value=latest,enable={{is_default_branch}}
-            # Add version tags when a tag is created
+            # Add version tags when a Gittag is created
             type=semver,pattern={{version}},prefix=v
-            # Add develop tag for PRs
-            type=raw,value=develop,enable=${{ github.event_name == 'pull_request' }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+            # Update stable tag when a GitHub tag is created
+            type=semver,value=stable
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
