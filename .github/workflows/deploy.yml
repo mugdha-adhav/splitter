@@ -31,7 +31,7 @@ jobs:
 
   deploy-prod:
     runs-on: ubuntu-latest
-    if: contains(github.ref, "release")
+    if: contains(github.ref, 'release')
     steps:
       - name: Install SSH key
         uses: shimataro/ssh-key-action@v2
