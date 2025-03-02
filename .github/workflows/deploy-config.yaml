@@ -27,3 +27,7 @@ jobs:
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
           scp -r server/* $SSH_USER@$SSH_HOST:$DEPLOY_PATH/
+          ssh $SSH_USER@$SSH_HOST << EOF
+            cd $DEPLOY_PATH
+            docker compose restart
+          EOF
