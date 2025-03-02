@@ -51,6 +51,7 @@ services:
       - VIRTUAL_HOST=dev.splitter.mriyam.com
       - LETSENCRYPT_HOST=dev.splitter.mriyam.com
       - LETSENCRYPT_TEST=true
+      #- foo=bar
     network_mode: bridge
 
 volumes:
