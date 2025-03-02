@@ -11,6 +11,7 @@ on:
     - go.mod
     - go.sum
     - Dockerfile
+    - server/**
   pull_request:
     branches:
       - main
@@ -90,6 +91,7 @@ jobs:
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
   deploy-dev:
+    needs: build-and-push
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
@@ -117,6 +119,7 @@ jobs:
           EOF
 
   deploy-prod:
+    needs: build-and-push
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:
