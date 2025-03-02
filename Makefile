@@ -13,7 +13,8 @@ clean: ## Clean build artifacts
 docker-build: ## Build Docker image
 	docker build -t splitter-app .
 
-docker-run: docker-build ## Run Docker container
+docker-run: ## Run Docker container
+	docker pull ghrc.io/mugdha-adhav/splitter:develop
 	docker run -p 8080:8080 splitter-app
 
 help: ## Display this help.
