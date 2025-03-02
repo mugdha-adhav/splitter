@@ -42,8 +42,8 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
             # Add version tag when a GitHub tag is created
             type=semver,pattern={{version}},prefix=v
-            # Update stable tag when a GitHub tag is created
-            type=semver,pattern={{version}},value=stable
+            # # Update stable tag when a GitHub tag is created
+            # type=semver,pattern={{version}},value=stable
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
