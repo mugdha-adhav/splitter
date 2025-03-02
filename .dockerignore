@@ -6,3 +6,4 @@ Dockerfile
 .dockerignore
 .vscode/
 .editorconfig
+.build

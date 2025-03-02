@@ -1,32 +1,35 @@
-name: Deploy to Server
+name: Deploy config to Server
 
 on:
-  workflow_run:
-    workflows: ["Docker Build and Push"]
-    types:
-      - completed
+  push:
+    branches:
+      - main
+    paths:
+      - server/**
 
 jobs:
-  deploy:
+  deploy-config:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    
     steps:
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: |
+          echo "$GITHUB_CONTEXT"
+      - uses: actions/checkout@v4
       - name: Install SSH key
         uses: shimataro/ssh-key-action@v2
         with:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
-          
-      - name: Deploy to Server
+      - name: Push config
         env:
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
+          scp -r server/* $SSH_USER@$SSH_HOST:$DEPLOY_PATH/
           ssh $SSH_USER@$SSH_HOST << EOF
-            SERVICE_NAME=${{ github.event_name == 'pull_request' && 'pr' || 'app' }}
             cd $DEPLOY_PATH
-            docker compose pull $SERVICE_NAME
-            docker compose restart $SERVICE_NAME
+            docker compose restart
           EOF
