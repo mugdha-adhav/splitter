@@ -43,7 +43,7 @@ jobs:
             # Add version tag when a GitHub tag is created
             type=semver,pattern={{version}},prefix=v
             # Update stable tag when a GitHub tag is created
-            type=raw,value=stable,enable=${{startsWith(github.ref, 'refs/tags/')}}
+            type=raw,value=stable,enable={{tag}}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
