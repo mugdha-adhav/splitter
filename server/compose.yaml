@@ -45,7 +45,7 @@ services:
       - LETSENCRYPT_TEST=true
     network_mode: bridge
 
-  app-pr:
+  pr:
     image: ghcr.io/mugdha-adhav/splitter:develop
     environment:
       - VIRTUAL_HOST=dev.splitter.mriyam.com
