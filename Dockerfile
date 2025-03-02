@@ -7,12 +7,12 @@ ENV GOOS=linux
 ENV GOARCH=arm64
 
 # Create go cache
-COPY go.mod .
+COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod \
     go mod download -x
 
 # Build
-COPY main.go .
+COPY main.go ./
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     go build -o splitter main.go
