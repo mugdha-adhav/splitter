@@ -7,26 +7,46 @@ on:
       - completed
 
 jobs:
-  deploy:
+  deploy-dev:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.ref == 'refs/heads/main' }}
     steps:
       - name: Install SSH key
         uses: shimataro/ssh-key-action@v2
         with:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
-          
-      - name: Deploy to Server
+      - name: Deploy Dev Service
         env:
           SSH_USER: ${{ secrets.SSH_USER }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
+          set -x
           ssh $SSH_USER@$SSH_HOST << EOF
-            SERVICE_NAME=${{ github.event_name == 'pull_request' && 'pr' || 'app' }}
             cd $DEPLOY_PATH
-            docker compose pull $SERVICE_NAME
-            docker compose restart $SERVICE_NAME
+            docker compose pull dev
+            docker compose restart dev
+          EOF
+
+  deploy-prod:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' && startsWith(github.ref, 'refs/tags/') }}
+    steps:
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+      - name: Deploy Prod Service
+        env:
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          set -x
+          ssh $SSH_USER@$SSH_HOST << EOF
+            cd $DEPLOY_PATH
+            docker compose pull prod
+            docker compose restart prod
           EOF
