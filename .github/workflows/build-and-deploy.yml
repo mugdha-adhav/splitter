@@ -11,7 +11,7 @@ on:
     - go.mod
     - go.sum
     - Dockerfile
-    - server/**
+    #- server/**
   pull_request:
     branches:
       - main
@@ -145,3 +145,26 @@ jobs:
             docker compose pull prod
             docker compose restart prod
           EOF
+
+  #deploy-config:
+  #  if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  #  runs-on: ubuntu-latest
+  #  steps:
+  #    - name: Dump GitHub context
+  #      env:
+  #        GITHUB_CONTEXT: ${{ toJson(github) }}
+  #      run: |
+  #        echo "$GITHUB_CONTEXT"
+  #    - uses: actions/checkout@v4
+  #    - name: Install SSH key
+  #      uses: shimataro/ssh-key-action@v2
+  #      with:
+  #        key: ${{ secrets.SSH_PRIVATE_KEY }}
+  #        known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+  #    - name: Push config
+  #      env:
+  #        SSH_USER: ${{ secrets.SSH_USER }}
+  #        SSH_HOST: ${{ secrets.SSH_HOST }}
+  #        DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+  #      run: |
+  #        scp -r server/* $SSH_USER@$SSH_HOST:$DEPLOY_PATH/
