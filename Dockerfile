@@ -1,13 +1,25 @@
 # Build stage
 FROM golang:1.24-alpine AS builder
+
 WORKDIR /app
-COPY go.mod ./
-COPY main.go ./
-RUN go build -o main
+
+ENV GOOS=linux
+ENV GOARCH=arm64
+
+# Create go cache
+COPY go.mod .
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download -x
+
+# Build
+COPY main.go .
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    go build -o splitter main.go
 
 # Final stage
-FROM alpine:latest
+FROM alpine:3.21
 WORKDIR /app
-COPY --from=builder /app/main .
+COPY --from=builder /app/splitter .
 EXPOSE 8080
-CMD ["./main"]
+CMD ["./splitter"]

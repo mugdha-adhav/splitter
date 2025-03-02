@@ -1,25 +1,20 @@
-.PHONY: build run clean docker-build docker-run
+.PHONY: build run clean docker-build docker-run help
 
-# Build the Go application
-build:
+build: ## Build the Go application
 	mkdir -p .build
 	go build -o .build/main
 
-# Run the application locally
-run: build
+run: build ## Run the application locally
 	./.build/main
 
-# Clean build artifacts
-clean:
+clean: ## Clean build artifacts
 	rm -rf .build
 
-# Build Docker image
-docker-build:
+docker-build: ## Build Docker image
 	docker build -t splitter-app .
 
-# Run Docker container
-docker-run: docker-build
+docker-run: docker-build ## Run Docker container
 	docker run -p 8080:8080 splitter-app
 
-# Default target
-all: build
+help: ## Display this help.
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
