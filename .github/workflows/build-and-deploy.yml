@@ -8,14 +8,10 @@ on:
       - 'v*'
     paths:
     - backend/**
+    - frontend/**
   pull_request:
     branches:
       - main
-
-env:
-  REGISTRY: ghcr.io
-  BACKEND_IMAGE_NAME: ${{ github.repository }}/backend
-  FRONTEND_IMAGE_NAME: ${{ github.repository }}/frontend
 
 jobs:
   build-and-push:
@@ -25,9 +21,9 @@ jobs:
       fail-fast: false
       matrix:
         image:
-          - name: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}
+          - name: ghcr.io/${{ github.repository }}/backend
             context: backend
-          - name: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}
+          - name: ghcr.io/${{ github.repository }}/frontend
             context: frontend
 
     permissions:
