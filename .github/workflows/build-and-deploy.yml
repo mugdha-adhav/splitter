@@ -7,10 +7,7 @@ on:
     tags:
       - 'v*'
     paths:
-    - backend/main.go
-    - backend/go.mod
-    - backend/go.sum
-    - backend/Dockerfile
+    - backend/**
   pull_request:
     branches:
       - main
@@ -73,8 +70,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          context: .
-          dockerfile: backend/Dockerfile
+          context: backend
           platforms: linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}

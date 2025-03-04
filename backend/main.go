@@ -16,12 +16,12 @@ var repository *db.Repository
 
 func main() {
 	// Create .data directory if it doesn't exist
-	if err := os.MkdirAll(filepath.Join("backend", ".data"), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(".data"), 0755); err != nil {
 		log.Fatal("Failed to create data directory:", err)
 	}
 
 	// Initialize database
-	dbPath := filepath.Join("backend", ".data", "splitter.db")
+	dbPath := filepath.Join(".data", "splitter.db")
 	database, err := db.InitDB(dbPath)
 	if err != nil {
 		log.Fatal("Failed to initialize database:", err)
