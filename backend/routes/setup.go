@@ -1,8 +1,17 @@
 package routes
 
 import (
+	"splitter/backend/db"
+
 	"github.com/gin-gonic/gin"
 )
+
+var repository *db.Repository
+
+// InitRepository initializes the repository for all routes
+func InitRepository(r *db.Repository) {
+	repository = r
+}
 
 // SetupRouter initializes all routes and returns the router instance
 func SetupRouter() *gin.Engine {

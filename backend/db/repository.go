@@ -49,6 +49,62 @@ func (r *Repository) ListUsers() ([]User, error) {
 	return users, nil
 }
 
+func (r *Repository) UpdateUser(user *User) error {
+	query := `UPDATE users SET name = ?, email = ? WHERE id = ?`
+	result, err := r.db.Exec(query, user.Name, user.Email, user.ID)
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return errors.New("user not found")
+	}
+	return nil
+}
+
+func (r *Repository) DeleteUser(id string) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// First check if user has any expenses or is part of any expense splits
+	var count int
+	query := `
+		SELECT COUNT(*) FROM (
+			SELECT paid_by FROM expenses WHERE paid_by = ?
+			UNION
+			SELECT user_id FROM expense_splits WHERE user_id = ?
+		) AS user_expenses`
+	err = tx.QueryRow(query, id, id).Scan(&count)
+	if err != nil {
+		return err
+	}
+	if count > 0 {
+		return errors.New("cannot delete user with associated expenses")
+	}
+
+	// Delete the user if no expenses are found
+	query = `DELETE FROM users WHERE id = ?`
+	result, err := tx.Exec(query, id)
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return errors.New("user not found")
+	}
+
+	return tx.Commit()
+}
+
 // Expense operations
 func (r *Repository) CreateExpense(expense *Expense) error {
 	tx, err := r.db.Begin()
@@ -185,4 +241,75 @@ func (r *Repository) getExpenseSplits(expenseID string) ([]ExpenseSplit, error) 
 		splits = append(splits, split)
 	}
 	return splits, nil
+}
+
+func (r *Repository) UpdateExpense(expense *Expense) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Update expense details
+	query := `UPDATE expenses SET description = ?, amount = ?, paid_by = ? WHERE id = ?`
+	result, err := tx.Exec(query, expense.Description, expense.Amount, expense.PaidBy, expense.ID)
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return errors.New("expense not found")
+	}
+
+	// Delete existing splits
+	query = `DELETE FROM expense_splits WHERE expense_id = ?`
+	_, err = tx.Exec(query, expense.ID)
+	if err != nil {
+		return err
+	}
+
+	// Insert new splits
+	query = `INSERT INTO expense_splits (expense_id, user_id, share) VALUES (?, ?, ?)`
+	for _, split := range expense.SplitAmong {
+		_, err = tx.Exec(query, expense.ID, split.UserID, split.Share)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
+func (r *Repository) DeleteExpense(id string) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Delete expense splits first (due to foreign key constraint)
+	query := `DELETE FROM expense_splits WHERE expense_id = ?`
+	_, err = tx.Exec(query, id)
+	if err != nil {
+		return err
+	}
+
+	// Delete the expense
+	query = `DELETE FROM expenses WHERE id = ?`
+	result, err := tx.Exec(query, id)
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return errors.New("expense not found")
+	}
+
+	return tx.Commit()
 }
