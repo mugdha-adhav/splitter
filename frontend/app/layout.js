@@ -12,7 +12,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Splitter - Split Expenses With Friends",
+  title: "Splitter - Split Expenses",
   description: "A simple way to split and track expenses with friends and family",
 };
 
