@@ -14,11 +14,22 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  BACKEND_IMAGE_NAME: ${{ github.repository }}/backend
+  FRONTEND_IMAGE_NAME: ${{ github.repository }}/frontend
 
 jobs:
   build-and-push:
     runs-on: ubuntu-24.04-arm
+
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - name: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}
+            context: backend
+          - name: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}
+            context: frontend
+
     permissions:
       contents: read
       packages: write
@@ -44,7 +55,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ matrix.image }}
           tags: |
             # define default branch
             type=edge,branch=main
@@ -70,7 +81,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          context: backend
+          context: ${{ matrix.image.context }}
           platforms: linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
@@ -110,8 +121,8 @@ jobs:
           set -x
           ssh $SSH_USER@$SSH_HOST << EOF
             cd $DEPLOY_PATH
-            docker compose pull dev
-            docker compose restart dev
+            docker compose pull dev-backend dev-frontend
+            docker compose restart dev-backend dev-frontend
           EOF
 
   deploy-prod:
@@ -138,6 +149,6 @@ jobs:
           set -x
           ssh $SSH_USER@$SSH_HOST << EOF
             cd $DEPLOY_PATH
-            docker compose pull prod
-            docker compose restart prod
+            docker compose pull prod-backend prod-frontend
+            docker compose restart prod-backend prod-frontend
           EOF
