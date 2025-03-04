@@ -2,7 +2,7 @@ package routes
 
 import (
 	"net/http"
-	"splitter/backend/db"
+	"splitter/db"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"

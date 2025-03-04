@@ -1,7 +1,7 @@
 package routes
 
 import (
-	"splitter/backend/db"
+	"splitter/db"
 
 	"github.com/gin-gonic/gin"
 )

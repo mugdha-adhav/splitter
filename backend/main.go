@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"splitter/backend/db"
-	"splitter/backend/routes"
+	"splitter/db"
+	"splitter/routes"
 
 	"golang.org/x/crypto/acme/autocert"
 )
@@ -15,6 +15,11 @@ import (
 var repository *db.Repository
 
 func main() {
+	// Create .data directory if it doesn't exist
+	if err := os.MkdirAll(filepath.Join(".data"), 0755); err != nil {
+		log.Fatal("Failed to create data directory:", err)
+	}
+
 	// Initialize database
 	dbPath := filepath.Join(".data", "splitter.db")
 	database, err := db.InitDB(dbPath)
