@@ -13,6 +13,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 
 # Build
 COPY main.go ./
+COPY db/ db/
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     go build -o splitter main.go
