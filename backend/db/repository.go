@@ -15,24 +15,48 @@ func NewRepository(db *sql.DB) *Repository {
 
 // User operations
 func (r *Repository) CreateUser(user *User) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
 	query := `INSERT INTO users (id, name, email) VALUES (?, ?, ?)`
-	_, err := r.db.Exec(query, user.ID, user.Name, user.Email)
-	return err
+	_, err = tx.Exec(query, user.ID, user.Name, user.Email)
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func (r *Repository) GetUser(id string) (*User, error) {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
 	var user User
 	query := `SELECT id, name, email, created_at FROM users WHERE id = ?`
-	err := r.db.QueryRow(query, id).Scan(&user.ID, &user.Name, &user.Email, &user.CreatedAt)
+	err = tx.QueryRow(query, id).Scan(&user.ID, &user.Name, &user.Email, &user.CreatedAt)
 	if err == sql.ErrNoRows {
 		return nil, errors.New("user not found")
 	}
-	return &user, err
+	if err != nil {
+		return nil, err
+	}
+	return &user, tx.Commit()
 }
 
 func (r *Repository) ListUsers() ([]User, error) {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
 	query := `SELECT id, name, email, created_at FROM users`
-	rows, err := r.db.Query(query)
+	rows, err := tx.Query(query)
 	if err != nil {
 		return nil, err
 	}
@@ -46,12 +70,19 @@ func (r *Repository) ListUsers() ([]User, error) {
 		}
 		users = append(users, user)
 	}
-	return users, nil
+
+	return users, tx.Commit()
 }
 
 func (r *Repository) UpdateUser(user *User) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
 	query := `UPDATE users SET name = ?, email = ? WHERE id = ?`
-	result, err := r.db.Exec(query, user.Name, user.Email, user.ID)
+	result, err := tx.Exec(query, user.Name, user.Email, user.ID)
 	if err != nil {
 		return err
 	}
@@ -62,7 +93,7 @@ func (r *Repository) UpdateUser(user *User) error {
 	if rowsAffected == 0 {
 		return errors.New("user not found")
 	}
-	return nil
+	return tx.Commit()
 }
 
 func (r *Repository) DeleteUser(id string) error {
@@ -169,8 +200,14 @@ func (r *Repository) GetExpense(id string) (*Expense, error) {
 }
 
 func (r *Repository) ListExpenses() ([]Expense, error) {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
 	query := `SELECT id, description, amount, paid_by, created_at FROM expenses`
-	rows, err := r.db.Query(query)
+	rows, err := tx.Query(query)
 	if err != nil {
 		return nil, err
 	}
@@ -191,17 +228,23 @@ func (r *Repository) ListExpenses() ([]Expense, error) {
 		expense.SplitAmong = splits
 		expenses = append(expenses, expense)
 	}
-	return expenses, nil
+	return expenses, tx.Commit()
 }
 
 func (r *Repository) GetUserExpenses(userID string) ([]Expense, error) {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
 	query := `
 		SELECT DISTINCT e.id, e.description, e.amount, e.paid_by, e.created_at 
 		FROM expenses e
 		LEFT JOIN expense_splits es ON e.id = es.expense_id
 		WHERE e.paid_by = ? OR es.user_id = ?`
 
-	rows, err := r.db.Query(query, userID, userID)
+	rows, err := tx.Query(query, userID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -221,12 +264,18 @@ func (r *Repository) GetUserExpenses(userID string) ([]Expense, error) {
 		expense.SplitAmong = splits
 		expenses = append(expenses, expense)
 	}
-	return expenses, nil
+	return expenses, tx.Commit()
 }
 
 func (r *Repository) getExpenseSplits(expenseID string) ([]ExpenseSplit, error) {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
 	query := `SELECT user_id, share FROM expense_splits WHERE expense_id = ?`
-	rows, err := r.db.Query(query, expenseID)
+	rows, err := tx.Query(query, expenseID)
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +289,7 @@ func (r *Repository) getExpenseSplits(expenseID string) ([]ExpenseSplit, error) 
 		}
 		splits = append(splits, split)
 	}
-	return splits, nil
+	return splits, tx.Commit()
 }
 
 func (r *Repository) UpdateExpense(expense *Expense) error {
