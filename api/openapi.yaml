@@ -1,0 +1,250 @@
+openapi: 3.1.0
+info:
+  title: Expense Splitter API
+  description: API for managing users and expenses in an expense splitting application
+  version: 0.0.1
+
+servers:
+  - url: https://dev.splitter.mriyam.com/api/v1
+    description: Development server
+  - url: https://splitter.mriyam.com/api/v1
+    description: Production server
+
+tags:
+  - name: Users
+    description: User management operations
+  - name: Expenses
+    description: Expense management operations
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - name
+        - email
+
+    Expense:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        description:
+          type: string
+        amount:
+          type: number
+          format: float
+        paid_by:
+          type: string
+          format: uuid
+        split_among:
+          type: array
+          items:
+            type: object
+            properties:
+              user_id:
+                type: string
+                format: uuid
+              share:
+                type: number
+                format: float
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - description
+        - amount
+        - paid_by
+        - split_among
+
+paths:
+  /users:
+    get:
+      tags:
+        - Users
+      summary: List all users
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+    post:
+      tags:
+        - Users
+      summary: Create a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /users/{userId}:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - Users
+      summary: Get user by ID
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+    put:
+      tags:
+        - Users
+      summary: Update user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        '200':
+          description: User updated successfully
+        '404':
+          description: User not found
+    delete:
+      tags:
+        - Users
+      summary: Delete user
+      responses:
+        '204':
+          description: User deleted successfully
+        '404':
+          description: User not found
+
+  /expenses:
+    get:
+      tags:
+        - Expenses
+      summary: List all expenses
+      responses:
+        '200':
+          description: List of expenses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Expense'
+    post:
+      tags:
+        - Expenses
+      summary: Create a new expense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Expense'
+      responses:
+        '201':
+          description: Expense created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+
+  /expenses/{expenseId}:
+    parameters:
+      - name: expenseId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - Expenses
+      summary: Get expense by ID
+      responses:
+        '200':
+          description: Expense details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+        '404':
+          description: Expense not found
+    put:
+      tags:
+        - Expenses
+      summary: Update expense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Expense'
+      responses:
+        '200':
+          description: Expense updated successfully
+        '404':
+          description: Expense not found
+    delete:
+      tags:
+        - Expenses
+      summary: Delete expense
+      responses:
+        '204':
+          description: Expense deleted successfully
+        '404':
+          description: Expense not found
+
+  /expenses/user/{userId}:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags:
+        - Expenses
+      summary: Get all expenses for a user
+      responses:
+        '200':
+          description: List of expenses for the user
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Expense'
