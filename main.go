@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-
 	"splitter/db"
+	"splitter/routes"
 
 	"golang.org/x/crypto/acme/autocert"
 )
@@ -26,32 +26,18 @@ func main() {
 	// Create repository instance
 	repository = db.NewRepository(database)
 
-	// Set up HTTP handlers
-	setupRoutes()
+	// Set up router using the routes package
+	router := routes.SetupRouter()
 
 	// Check environment
 	if os.Getenv("ENV") == "local" {
-		serveLocal()
+		serveLocal(router)
 	} else {
-		serve()
+		serve(router)
 	}
 }
 
-func setupRoutes() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Hello world"))
-	})
-
-	http.HandleFunc("/foo", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("bar"))
-	})
-
-	http.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("wip"))
-	})
-}
-
-func serve() {
+func serve(router http.Handler) {
 	certManager := autocert.Manager{
 		Prompt:     autocert.AcceptTOS,
 		HostPolicy: autocert.HostWhitelist("splitter.mriyam.com"),
@@ -59,24 +45,26 @@ func serve() {
 	}
 
 	server := &http.Server{
-		Addr: ":https",
+		Addr:    ":https",
+		Handler: router,
 		TLSConfig: &tls.Config{
 			GetCertificate: certManager.GetCertificate,
 			MinVersion:     tls.VersionTLS12,
 		},
 	}
 
-	go http.ListenAndServe(":http", certManager.HTTPHandler(nil))
+	// Handle HTTP-01 challenge
+	go http.ListenAndServe(":http", certManager.HTTPHandler(router))
+
 	log.Printf("Starting production server on HTTPS")
 	log.Fatal(server.ListenAndServeTLS("", ""))
 }
 
-func serveLocal() {
+func serveLocal(router http.Handler) {
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
-
 	log.Printf("Starting local server on http://localhost:%s", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	log.Fatal(http.ListenAndServe(":"+port, router))
 }

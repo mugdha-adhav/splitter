@@ -5,7 +5,7 @@ build: ## Build the Go application
 	go build -o .build/main
 
 run: build ## Run the application locally
-	./.build/main
+	export ENV=local && ./.build/main
 
 clean: ## Clean build artifacts
 	rm -rf .build
