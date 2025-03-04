@@ -37,21 +37,40 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     network_mode: bridge
 
-  prod:
-    image: ghcr.io/mugdha-adhav/splitter:latest
+  prod-backend:
+    image: ghcr.io/mugdha-adhav/splitter/backend:latest
     environment:
       - VIRTUAL_HOST=splitter.mriyam.com
+      - VIRTUAL_PATH=/api/v1
       - LETSENCRYPT_HOST=splitter.mriyam.com
       - LETSENCRYPT_TEST=true
     network_mode: bridge
 
-  dev:
-    image: ghcr.io/mugdha-adhav/splitter:edge
+  dev-backend:
+    image: ghcr.io/mugdha-adhav/splitter/backend:edge
     environment:
       - VIRTUAL_HOST=dev.splitter.mriyam.com
+      - VIRTUAL_PATH=/api/v1
       - LETSENCRYPT_HOST=dev.splitter.mriyam.com
       - LETSENCRYPT_TEST=true
-      #- foo=bar
+    network_mode: bridge
+
+    prod-frontend:
+    image: ghcr.io/mugdha-adhav/splitter/frontend:latest
+    environment:
+      - VIRTUAL_HOST=splitter.mriyam.com
+      - VIRTUAL_PATH=/
+      - LETSENCRYPT_HOST=splitter.mriyam.com
+      - LETSENCRYPT_TEST=true
+    network_mode: bridge
+
+  dev-frontend:
+    image: ghcr.io/mugdha-adhav/splitter/frontend:edge
+    environment:
+      - VIRTUAL_HOST=dev.splitter.mriyam.com
+      - VIRTUAL_PATH=/
+      - LETSENCRYPT_HOST=dev.splitter.mriyam.com
+      - LETSENCRYPT_TEST=true
     network_mode: bridge
 
 volumes:
