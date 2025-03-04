@@ -4,17 +4,40 @@ import (
 	"crypto/tls"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
+
+	"splitter/db"
 
 	"golang.org/x/crypto/acme/autocert"
 )
 
-func main() {
-	certManager := autocert.Manager{
-		Prompt:     autocert.AcceptTOS,
-		HostPolicy: autocert.HostWhitelist("splitter.mriyam.com"),
-		Cache:      autocert.DirCache("certs"),
-	}
+var repository *db.Repository
 
+func main() {
+	// Initialize database
+	dbPath := filepath.Join(".data", "splitter.db")
+	database, err := db.InitDB(dbPath)
+	if err != nil {
+		log.Fatal("Failed to initialize database:", err)
+	}
+	defer database.Close()
+
+	// Create repository instance
+	repository = db.NewRepository(database)
+
+	// Set up HTTP handlers
+	setupRoutes()
+
+	// Check environment
+	if os.Getenv("ENV") == "local" {
+		serveLocal()
+	} else {
+		serve()
+	}
+}
+
+func setupRoutes() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Hello world"))
 	})
@@ -26,6 +49,14 @@ func main() {
 	http.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("wip"))
 	})
+}
+
+func serve() {
+	certManager := autocert.Manager{
+		Prompt:     autocert.AcceptTOS,
+		HostPolicy: autocert.HostWhitelist("splitter.mriyam.com"),
+		Cache:      autocert.DirCache("certs"),
+	}
 
 	server := &http.Server{
 		Addr: ":https",
@@ -36,6 +67,16 @@ func main() {
 	}
 
 	go http.ListenAndServe(":http", certManager.HTTPHandler(nil))
+	log.Printf("Starting production server on HTTPS")
+	log.Fatal(server.ListenAndServeTLS("", ""))
+}
 
-	log.Fatal(server.ListenAndServeTLS("", "")) //Key and cert are coming from Let's Encrypt
+func serveLocal() {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	log.Printf("Starting local server on http://localhost:%s", port)
+	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
