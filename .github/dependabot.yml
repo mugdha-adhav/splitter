@@ -2,7 +2,7 @@ version: 2
 updates:
   # Go modules
   - package-ecosystem: "gomod"
-    directory: "/"
+    directory: "/backend"
     schedule:
       interval: "daily"
     open-pull-requests-limit: 3
@@ -16,7 +16,7 @@ updates:
 
   # Docker
   - package-ecosystem: "docker"
-    directory: "/"
+    directory: "/backend"
     schedule:
       interval: "daily"
     open-pull-requests-limit: 3

@@ -7,10 +7,10 @@ on:
     tags:
       - 'v*'
     paths:
-    - main.go
-    - go.mod
-    - go.sum
-    - Dockerfile
+    - backend/main.go
+    - backend/go.mod
+    - backend/go.sum
+    - backend/Dockerfile
   pull_request:
     branches:
       - main
