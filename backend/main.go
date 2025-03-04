@@ -23,8 +23,9 @@ func main() {
 	}
 	defer database.Close()
 
-	// Create repository instance
+	// Create repository instance and initialize routes with it
 	repository = db.NewRepository(database)
+	routes.InitRepository(repository)
 
 	// Set up router using the routes package
 	router := routes.SetupRouter()
