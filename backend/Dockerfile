@@ -5,6 +5,9 @@ WORKDIR /app
 
 ENV GOOS=linux
 ENV GOARCH=arm64
+ENV CGO_ENABLED=1
+
+RUN apk add --no-cache build-base
 
 # Create go cache
 COPY go.mod go.sum ./

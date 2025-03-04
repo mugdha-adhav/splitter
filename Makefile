@@ -2,7 +2,7 @@
 
 build: ## Build the Go application
 	mkdir -p backend/.build
-	cd backend && go build -o .build/main main.go
+	cd backend && CGO_ENABLED=1 go build -o .build/main main.go
 
 run: build ## Run the application locally
 	export ENV=local && cd backend && ./.build/main
@@ -11,7 +11,7 @@ clean: ## Clean build artifacts
 	rm -rf backend/.build
 
 docker-build: ## Build Docker image
-	docker build -t splitter-app -f backend/Dockerfile .
+	docker build -t splitter-app backend
 
 docker-run: ## Run Docker container
 	docker pull ghrc.io/mugdha-adhav/splitter:develop
