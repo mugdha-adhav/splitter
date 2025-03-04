@@ -12,11 +12,10 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     go mod download -x
 
 # Build
-COPY main.go ./
-COPY db/ db/
+COPY backend/ backend/
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    go build -o splitter main.go
+    go build -o splitter backend/main.go
 
 # Final stage
 FROM alpine:3.21

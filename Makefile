@@ -2,7 +2,7 @@
 
 build: ## Build the Go application
 	mkdir -p .build
-	go build -o .build/main
+	go build -o .build/main backend/main.go
 
 run: build ## Run the application locally
 	export ENV=local && ./.build/main

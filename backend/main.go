@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"splitter/db"
-	"splitter/routes"
+	"splitter/backend/db"
+	"splitter/backend/routes"
 
 	"golang.org/x/crypto/acme/autocert"
 )
