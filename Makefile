@@ -1,17 +1,17 @@
 .PHONY: build run clean docker-build docker-run help
 
 build: ## Build the Go application
-	mkdir -p .build
-	go build -o .build/main backend/main.go
+	mkdir -p backend/.build
+	cd backend && go build -o .build/main main.go
 
 run: build ## Run the application locally
-	export ENV=local && ./.build/main
+	export ENV=local && cd backend && ./.build/main
 
 clean: ## Clean build artifacts
-	rm -rf .build
+	rm -rf backend/.build
 
 docker-build: ## Build Docker image
-	docker build -t splitter-app .
+	docker build -t splitter-app -f backend/Dockerfile .
 
 docker-run: ## Run Docker container
 	docker pull ghrc.io/mugdha-adhav/splitter:develop
