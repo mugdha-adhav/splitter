@@ -5,31 +5,70 @@ info:
   version: 0.0.1
 
 servers:
-  - url: https://dev.splitter.mriyam.com/api/v1
+  - url: https://dev.splitter.mriyam.com/api
     description: Development server
-  - url: https://splitter.mriyam.com/api/v1
+  - url: https://splitter.mriyam.com/api
     description: Production server
+  - url: http://localhost:8080/api
+    description: Local server
 
 tags:
+  - name: Auth
+    description: Authentication operations
   - name: Users
     description: User management operations
   - name: Expenses
     description: Expense management operations
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
+    AuthRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+          minLength: 6
+        name:
+          type: string
+          description: Required only for registration
+      required:
+        - email
+        - password
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        token:
+          type: string
+          description: JWT token for authentication
+
     User:
       type: object
       properties:
         id:
-          type: string
-          format: uuid
+          type: integer
+          format: uint
         name:
           type: string
         email:
           type: string
           format: email
         created_at:
+          type: string
+          format: date-time
+        updated_at:
           type: string
           format: date-time
       required:
@@ -40,37 +79,102 @@ components:
       type: object
       properties:
         id:
+          type: integer
+          format: uint
+        title:
           type: string
-          format: uuid
         description:
           type: string
         amount:
           type: number
           format: float
         paid_by:
-          type: string
-          format: uuid
-        split_among:
+          type: integer
+          format: uint
+        splits:
           type: array
           items:
-            type: object
-            properties:
-              user_id:
-                type: string
-                format: uuid
-              share:
-                type: number
-                format: float
+            $ref: '#/components/schemas/ExpenseSplit'
         created_at:
           type: string
           format: date-time
+        updated_at:
+          type: string
+          format: date-time
       required:
-        - description
+        - title
         - amount
         - paid_by
-        - split_among
+        - splits
+
+    ExpenseSplit:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: uint
+        user_id:
+          type: integer
+          format: uint
+        share_ratio:
+          type: number
+          format: float
+        amount:
+          type: number
+          format: float
+      required:
+        - user_id
+        - share_ratio
+        - amount
+
+security:
+  - bearerAuth: []
 
 paths:
+  /auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Register a new user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRequest'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '409':
+          description: Email already registered
+
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Login with email and password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+
   /users:
     get:
       tags:
@@ -109,8 +213,8 @@ paths:
         in: path
         required: true
         schema:
-          type: string
-          format: uuid
+          type: integer
+          format: uint
     get:
       tags:
         - Users
@@ -137,6 +241,10 @@ paths:
       responses:
         '200':
           description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
         '404':
           description: User not found
     delete:
@@ -148,6 +256,8 @@ paths:
           description: User deleted successfully
         '404':
           description: User not found
+        '409':
+          description: Cannot delete user with associated expenses
 
   /expenses:
     get:
@@ -187,8 +297,8 @@ paths:
         in: path
         required: true
         schema:
-          type: string
-          format: uuid
+          type: integer
+          format: uint
     get:
       tags:
         - Expenses
@@ -215,6 +325,10 @@ paths:
       responses:
         '200':
           description: Expense updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
         '404':
           description: Expense not found
     delete:
@@ -233,8 +347,8 @@ paths:
         in: path
         required: true
         schema:
-          type: string
-          format: uuid
+          type: integer
+          format: uint
     get:
       tags:
         - Expenses

@@ -7,6 +7,9 @@ build: ## Build the Go application
 run: build ## Run the application locally
 	export ENV=local && cd backend && ./.build/main
 
+unit-test: ## Run unit tests
+	cd backend && go test -v ./...
+
 clean: ## Clean build artifacts
 	rm -rf backend/.build
 

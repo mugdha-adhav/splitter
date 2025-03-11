@@ -3,9 +3,9 @@ package routes
 import (
 	"net/http"
 	"splitter/db"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 func setupExpenseRoutes(rg *gin.RouterGroup) {
@@ -16,7 +16,7 @@ func setupExpenseRoutes(rg *gin.RouterGroup) {
 		expenses.GET("/:expenseId", getExpense)
 		expenses.PUT("/:expenseId", updateExpense)
 		expenses.DELETE("/:expenseId", deleteExpense)
-		expenses.GET("/user/:userId", getExpensesByUser)
+		expenses.GET("/user/:userId", getUserExpenses)
 	}
 }
 
@@ -36,20 +36,21 @@ func createExpense(c *gin.Context) {
 		return
 	}
 
-	// Generate UUID for new expense
-	expense.ID = uuid.New().String()
-
 	if err := repository.CreateExpense(&expense); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create expense"})
 		return
 	}
-
 	c.JSON(http.StatusCreated, expense)
 }
 
 func getExpense(c *gin.Context) {
-	expenseId := c.Param("expenseId")
-	expense, err := repository.GetExpense(expenseId)
+	expenseId, err := strconv.ParseUint(c.Param("expenseId"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid expense ID"})
+		return
+	}
+
+	expense, err := repository.GetExpense(uint(expenseId))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Expense not found"})
 		return
@@ -58,16 +59,19 @@ func getExpense(c *gin.Context) {
 }
 
 func updateExpense(c *gin.Context) {
-	expenseId := c.Param("expenseId")
+	expenseId, err := strconv.ParseUint(c.Param("expenseId"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid expense ID"})
+		return
+	}
+
 	var expense db.Expense
 	if err := c.ShouldBindJSON(&expense); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Set the ID from path parameter
-	expense.ID = expenseId
-
+	expense.ID = uint(expenseId)
 	if err := repository.UpdateExpense(&expense); err != nil {
 		if err.Error() == "expense not found" {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -76,13 +80,17 @@ func updateExpense(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update expense"})
 		return
 	}
-
 	c.JSON(http.StatusOK, expense)
 }
 
 func deleteExpense(c *gin.Context) {
-	expenseId := c.Param("expenseId")
-	if err := repository.DeleteExpense(expenseId); err != nil {
+	expenseId, err := strconv.ParseUint(c.Param("expenseId"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid expense ID"})
+		return
+	}
+
+	if err := repository.DeleteExpense(uint(expenseId)); err != nil {
 		if err.Error() == "expense not found" {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
@@ -93,9 +101,14 @@ func deleteExpense(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-func getExpensesByUser(c *gin.Context) {
-	userId := c.Param("userId")
-	expenses, err := repository.GetUserExpenses(userId)
+func getUserExpenses(c *gin.Context) {
+	userId, err := strconv.ParseUint(c.Param("userId"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	expenses, err := repository.GetUserExpenses(uint(userId))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user expenses"})
 		return

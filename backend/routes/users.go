@@ -3,9 +3,9 @@ package routes
 import (
 	"net/http"
 	"splitter/db"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 func setupUserRoutes(rg *gin.RouterGroup) {
@@ -35,20 +35,21 @@ func createUser(c *gin.Context) {
 		return
 	}
 
-	// Generate UUID for new user
-	user.ID = uuid.New().String()
-
-	if err := repository.CreateUser(&user); err != nil {
+	if err := repository.CreateUserWithAuth(&user); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 		return
 	}
-
 	c.JSON(http.StatusCreated, user)
 }
 
 func getUser(c *gin.Context) {
-	userId := c.Param("userId")
-	user, err := repository.GetUser(userId)
+	userId, err := strconv.ParseUint(c.Param("userId"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	user, err := repository.GetUser(uint(userId))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
@@ -57,16 +58,19 @@ func getUser(c *gin.Context) {
 }
 
 func updateUser(c *gin.Context) {
-	userId := c.Param("userId")
+	userId, err := strconv.ParseUint(c.Param("userId"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
 	var user db.User
 	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Set the ID from path parameter
-	user.ID = userId
-
+	user.ID = uint(userId)
 	if err := repository.UpdateUser(&user); err != nil {
 		if err.Error() == "user not found" {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -75,13 +79,17 @@ func updateUser(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
 		return
 	}
-
 	c.JSON(http.StatusOK, user)
 }
 
 func deleteUser(c *gin.Context) {
-	userId := c.Param("userId")
-	if err := repository.DeleteUser(userId); err != nil {
+	userId, err := strconv.ParseUint(c.Param("userId"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	if err := repository.DeleteUser(uint(userId)); err != nil {
 		if err.Error() == "user not found" {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return

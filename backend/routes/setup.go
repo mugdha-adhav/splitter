@@ -4,24 +4,39 @@ import (
 	"splitter/db"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 var repository *db.Repository
 
-// InitRepository initializes the repository for all routes
-func InitRepository(r *db.Repository) {
-	repository = r
-}
-
-// SetupRouter initializes all routes and returns the router instance
-func SetupRouter() *gin.Engine {
+func SetupRouter(database *gorm.DB) *gin.Engine {
+	repository = db.NewRepository(database)
 	router := gin.Default()
 
-	// API versioning group
-	v1 := router.Group("/api/v1")
+	// Enable CORS
+	router.Use(func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Authorization, Content-Type")
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+		c.Next()
+	})
+
+	api := router.Group("/api")
 	{
-		setupUserRoutes(v1)
-		setupExpenseRoutes(v1)
+		// Public routes (no authentication required)
+		setupAuthRoutes(api)
+
+		// Protected routes (require authentication)
+		protected := api.Group("")
+		protected.Use(AuthMiddleware())
+		{
+			setupUserRoutes(protected)
+			setupExpenseRoutes(protected)
+		}
 	}
 
 	return router
