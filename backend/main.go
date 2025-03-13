@@ -1,76 +1,99 @@
 package main
 
 import (
-	"crypto/tls"
+	"fmt"
 	"log"
-	"net/http"
-	"os"
-	"path/filepath"
-	"splitter/db"
-	"splitter/routes"
 
-	"golang.org/x/crypto/acme/autocert"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
-var repository *db.Repository
+type User struct {
+	gorm.Model
+
+	ID       uuid.UUID `gorm:"primaryKey"`
+	Name     string    `gorm:"type:varchar(40);unique" json:"name,omitempty"`
+	Password string    `gorm:"size:255" json:"password,omitempty"`
+}
+
+// makePasswordHash generates a password hash
+func makePasswordHash(password string) (string, error) {
+	data, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate password hash: %w", err)
+	}
+
+	return string(data), nil
+}
+
+func dbInit() (*gorm.DB, error) {
+	// Connect to DB
+	db, err := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect database: %w", err)
+	}
+
+	// Migrate the schema
+	db.AutoMigrate(&User{})
+
+	// Seed User
+	{
+		hashedPassword, err := makePasswordHash("password")
+		if err != nil {
+			return nil, fmt.Errorf("failed to seed user: %w", err)
+		}
+
+		if err := db.FirstOrCreate(&User{
+			ID:       uuid.New(),
+			Name:     "defaultUser",
+			Password: hashedPassword,
+		}).Error; err != nil {
+			return nil, fmt.Errorf("failed to seed user: %w", err)
+		}
+	}
+
+	return db, nil
+}
 
 func main() {
-	// Create .data directory if it doesn't exist
-	if err := os.MkdirAll(filepath.Join(".data"), 0755); err != nil {
-		log.Fatal("Failed to create data directory:", err)
-	}
-
-	// Initialize database
-	dbPath := filepath.Join(".data", "splitter.db")
-	database, err := db.InitDB(dbPath)
+	db, err := dbInit()
 	if err != nil {
-		log.Fatal("Failed to initialize database:", err)
-	}
-	defer database.Close()
-
-	// Create repository instance and initialize routes with it
-	repository = db.NewRepository(database)
-	routes.InitRepository(repository)
-
-	// Set up router using the routes package
-	router := routes.SetupRouter()
-
-	// Check environment
-	if os.Getenv("ENV") == "local" {
-		serveLocal(router)
-	} else {
-		serve(router)
-	}
-}
-
-func serve(router http.Handler) {
-	certManager := autocert.Manager{
-		Prompt:     autocert.AcceptTOS,
-		HostPolicy: autocert.HostWhitelist("splitter.mriyam.com"),
-		Cache:      autocert.DirCache("certs"),
+		log.Fatal(err)
 	}
 
-	server := &http.Server{
-		Addr:    ":https",
-		Handler: router,
-		TLSConfig: &tls.Config{
-			GetCertificate: certManager.GetCertificate,
-			MinVersion:     tls.VersionTLS12,
-		},
-	}
+	r := gin.Default()
+	r.GET("/ping", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "pong",
+		})
+	})
+	r.POST("/login", func(c *gin.Context) {
+		var user User
+		if c.ShouldBind(&user) == nil {
+			var dbUser User
+			result := db.Where("name = ?", user.Name).First(&dbUser)
+			if result.Error != nil {
+				c.JSON(401, gin.H{
+					"message": "User not found",
+				})
+				return
+			}
 
-	// Handle HTTP-01 challenge
-	go http.ListenAndServe(":http", certManager.HTTPHandler(router))
+			err := bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(user.Password))
+			if err != nil {
+				c.JSON(401, gin.H{
+					"message": "Invalid password",
+				})
+				return
+			}
 
-	log.Printf("Starting production server on HTTPS")
-	log.Fatal(server.ListenAndServeTLS("", ""))
-}
-
-func serveLocal(router http.Handler) {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-	log.Printf("Starting local server on http://localhost:%s", port)
-	log.Fatal(http.ListenAndServe(":"+port, router))
+			c.JSON(200, gin.H{
+				"message": "Login successful",
+			})
+		}
+	})
+	r.Run()
 }

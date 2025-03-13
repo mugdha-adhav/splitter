@@ -1,6 +1,1 @@
-.build/
-.DS_Store
-.vscode/
-.editorconfig
-.data/
-*.db
+test.db
