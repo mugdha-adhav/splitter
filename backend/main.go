@@ -79,7 +79,7 @@ func main() {
 		if c.ShouldBind(&user) == nil {
 			var dbUser User
 
-			if user.Name != "" {
+			if user.Name != "" && user.Email == "" {
 				result := db.Where("name = ?", user.Name).First(&dbUser)
 				if result.Error != nil {
 					c.JSON(401, gin.H{
@@ -89,7 +89,7 @@ func main() {
 				}
 			}
 
-			if user.Email != "" {
+			if user.Email != "" && user.Name == "" {
 				result := db.Where("email = ?", user.Email).First(&dbUser)
 				if result.Error != nil {
 					c.JSON(401, gin.H{
@@ -146,6 +146,7 @@ func main() {
 				c.JSON(401, gin.H{
 					"message": "Failed to register user",
 				})
+				return
 			}
 
 			if err := db.Create(&User{
@@ -157,6 +158,7 @@ func main() {
 				c.JSON(401, gin.H{
 					"message": "Failed to register user",
 				})
+				return
 			}
 
 			c.JSON(200, gin.H{
