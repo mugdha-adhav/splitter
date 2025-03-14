@@ -6,7 +6,6 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -16,10 +15,9 @@ import (
 type User struct {
 	gorm.Model
 
-	ID       uuid.UUID `gorm:"primaryKey"`
-	Name     string    `gorm:"type:varchar(40);unique" json:"name,omitempty" form:"name,omitempty"`
-	Password string    `gorm:"size:255" json:"password,omitempty" form:"password,omitempty"`
-	Email    string    `gorm:"type:varchar(40);unique" json:"email" form:"email,omitempty"`
+	Name     string `gorm:"type:varchar(40);unique" json:"name,omitempty" form:"name,omitempty"`
+	Password string `gorm:"size:255" json:"password,omitempty" form:"password,omitempty"`
+	Email    string `gorm:"type:varchar(40);unique" json:"email" form:"email,omitempty"`
 	// Add relationships
 	OwnedGroups []Group `gorm:"foreignKey:OwnerRefer"`
 	Groups      []Group `gorm:"many2many:user_groups;"`
@@ -28,9 +26,8 @@ type User struct {
 type Group struct {
 	gorm.Model
 
-	ID         uuid.UUID `gorm:"primaryKey"`
-	Name       string    `gorm:"type:varchar(40)" json:"name"`
-	OwnerRefer uuid.UUID
+	Name       string `gorm:"type:varchar(40)" json:"name"`
+	OwnerRefer uint
 	Owner      User   `gorm:"foreignKey:OwnerRefer;constraint:OnDelete:CASCADE;"`
 	Members    []User `gorm:"many2many:user_groups;"`
 }
@@ -63,7 +60,6 @@ func dbInit() (*gorm.DB, error) {
 		}
 
 		if err := db.Clauses(clause.OnConflict{DoNothing: true}).Create(&User{
-			ID:       uuid.New(),
 			Name:     "defaultUser",
 			Email:    "default@example.com",
 			Password: hashedPassword,
@@ -202,7 +198,6 @@ func main() {
 
 		// Create new user
 		user := User{
-			ID:       uuid.New(),
 			Name:     req.Name,
 			Email:    req.Email,
 			Password: pass,
@@ -227,8 +222,8 @@ func main() {
 
 	r.POST("/group", func(c *gin.Context) {
 		type CreateGroupRequest struct {
-			Name    string    `json:"name" binding:"required"`
-			OwnerID uuid.UUID `json:"owner_id" binding:"required"`
+			Name    string `json:"name" binding:"required"`
+			OwnerID uint   `json:"owner_id" binding:"required"`
 		}
 
 		var req CreateGroupRequest
@@ -250,7 +245,6 @@ func main() {
 
 		// Create group
 		group := Group{
-			ID:         uuid.New(),
 			Name:       req.Name,
 			OwnerRefer: req.OwnerID,
 			Members:    []User{owner}, // Add owner as a member too
