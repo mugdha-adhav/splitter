@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -80,7 +81,7 @@ func main() {
 	r := gin.Default()
 	r.Use(cors.Default())
 	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{
+		c.JSON(http.StatusOK, gin.H{
 			"message": "pong",
 		})
 	})
@@ -94,7 +95,7 @@ func main() {
 
 		var req LoginRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(400, gin.H{
+			c.JSON(http.StatusBadRequest, gin.H{
 				"message": "Invalid request. Password and either email or username are required",
 			})
 			return
@@ -102,14 +103,14 @@ func main() {
 
 		// Validate that either email or username is provided
 		if req.Email == "" && req.Name == "" {
-			c.JSON(400, gin.H{
+			c.JSON(http.StatusBadRequest, gin.H{
 				"message": "Either email or username must be provided",
 			})
 			return
 		}
 
 		if req.Email != "" && req.Name != "" {
-			c.JSON(400, gin.H{
+			c.JSON(http.StatusBadRequest, gin.H{
 				"message": "Please provide either email or username, not both",
 			})
 			return
@@ -120,14 +121,14 @@ func main() {
 		// Find user by name or email
 		if req.Name != "" {
 			if result := db.Where("name = ?", req.Name).First(&dbUser); result.Error != nil {
-				c.JSON(404, gin.H{
+				c.JSON(http.StatusNotFound, gin.H{
 					"message": "User not found",
 				})
 				return
 			}
 		} else {
 			if result := db.Where("email = ?", req.Email).First(&dbUser); result.Error != nil {
-				c.JSON(404, gin.H{
+				c.JSON(http.StatusNotFound, gin.H{
 					"message": "User not found",
 				})
 				return
@@ -136,13 +137,13 @@ func main() {
 
 		// Verify password
 		if err := bcrypt.CompareHashAndPassword([]byte(dbUser.Password), []byte(req.Password)); err != nil {
-			c.JSON(401, gin.H{
+			c.JSON(http.StatusUnauthorized, gin.H{
 				"message": "Invalid password",
 			})
 			return
 		}
 
-		c.JSON(200, gin.H{
+		c.JSON(http.StatusOK, gin.H{
 			"message": "Login successful",
 			"user": gin.H{
 				"id":    dbUser.ID,
@@ -161,7 +162,7 @@ func main() {
 
 		var req RegisterRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(400, gin.H{
+			c.JSON(http.StatusBadRequest, gin.H{
 				"message": "Invalid request. Name, email, and password are required",
 			})
 			return
@@ -172,7 +173,7 @@ func main() {
 		// Check if email already exists
 		result := db.Where("email = ?", req.Email).First(&dbUser)
 		if result.Error == nil {
-			c.JSON(400, gin.H{
+			c.JSON(http.StatusBadRequest, gin.H{
 				"message": "Email already exists",
 			})
 			return
@@ -181,7 +182,7 @@ func main() {
 		// Check if name already exists
 		result = db.Where("name = ?", req.Name).First(&dbUser)
 		if result.Error == nil {
-			c.JSON(400, gin.H{
+			c.JSON(http.StatusBadRequest, gin.H{
 				"message": "Username already exists",
 			})
 			return
@@ -190,7 +191,7 @@ func main() {
 		// Hash password
 		pass, err := makePasswordHash(req.Password)
 		if err != nil {
-			c.JSON(500, gin.H{
+			c.JSON(http.StatusInternalServerError, gin.H{
 				"message": "Internal server error while processing registration",
 			})
 			return
@@ -204,13 +205,13 @@ func main() {
 		}
 
 		if err := db.Create(&user).Error; err != nil {
-			c.JSON(500, gin.H{
+			c.JSON(http.StatusInternalServerError, gin.H{
 				"message": "Failed to create user",
 			})
 			return
 		}
 
-		c.JSON(201, gin.H{
+		c.JSON(http.StatusCreated, gin.H{
 			"message": "User registered successfully",
 			"user": gin.H{
 				"id":    user.ID,
@@ -228,7 +229,7 @@ func main() {
 
 		var req CreateGroupRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(400, gin.H{
+			c.JSON(http.StatusBadRequest, gin.H{
 				"message": "Invalid request. Group name and owner ID are required",
 			})
 			return
@@ -237,7 +238,7 @@ func main() {
 		// Verify owner exists
 		var owner User
 		if result := db.First(&owner, "id = ?", req.OwnerID); result.Error != nil {
-			c.JSON(404, gin.H{
+			c.JSON(http.StatusNotFound, gin.H{
 				"message": "Owner not found",
 			})
 			return
@@ -251,13 +252,13 @@ func main() {
 		}
 
 		if err := db.Create(&group).Error; err != nil {
-			c.JSON(500, gin.H{
+			c.JSON(http.StatusInternalServerError, gin.H{
 				"message": "Failed to create group",
 			})
 			return
 		}
 
-		c.JSON(200, gin.H{
+		c.JSON(http.StatusCreated, gin.H{
 			"message": "Group created successfully",
 			"group": gin.H{
 				"id":       group.ID,
