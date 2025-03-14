@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-contrib/cors"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/sqlite"
@@ -16,9 +17,9 @@ type User struct {
 	gorm.Model
 
 	ID       uuid.UUID `gorm:"primaryKey"`
-	Name     string    `gorm:"type:varchar(40);unique" json:"name,omitempty"`
-	Password string    `gorm:"size:255" json:"password"`
-	Email    string    `gorm:"type:varchar(40);unique" json:"email"`
+	Name     string    `gorm:"type:varchar(40);unique" json:"name,omitempty" form:"name,omitempty"`
+	Password string    `gorm:"size:255" json:"password" form:"password,omitempty"`
+	Email    string    `gorm:"type:varchar(40);unique" json:"email" form:"email,omitempty"`
 }
 
 // makePasswordHash generates a password hash
@@ -68,6 +69,7 @@ func main() {
 	}
 
 	r := gin.Default()
+	r.Use(cors.Default())
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "pong",
