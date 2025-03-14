@@ -17,9 +17,9 @@ type User struct {
 	gorm.Model
 
 	ID       uuid.UUID `gorm:"primaryKey"`
-	Name     string    `gorm:"type:varchar(40);unique" json:"name,omitempty"`
-	Password string    `gorm:"size:255" json:"password,omitempty"`
-	Email    string    `gorm:"type:varchar(40);unique" json:"email"`
+	Name     string    `gorm:"type:varchar(40);unique" json:"name,omitempty" form:"name,omitempty"`
+	Password string    `gorm:"size:255" json:"password,omitempty" form:"password,omitempty"`
+	Email    string    `gorm:"type:varchar(40);unique" json:"email" form:"email,omitempty"`
 	// Add relationships
 	OwnedGroups []Group `gorm:"foreignKey:OwnerRefer"`
 	Groups      []Group `gorm:"many2many:user_groups;"`
