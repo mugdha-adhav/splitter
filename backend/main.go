@@ -415,7 +415,7 @@ func main() {
 				"amount":     expense.Amount,
 				"group_id":   expense.GroupID,
 				"created_by": expense.CreatedByID,
-				"user_ids":   req.UserIDs,
+				"user_ids":   uniqueUserIDs,
 			},
 		})
 	})
