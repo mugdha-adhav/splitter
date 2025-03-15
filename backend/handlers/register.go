@@ -147,8 +147,7 @@ func unauthorized() func(c *gin.Context, code int, message string) {
 
 func handleNoRoute() func(c *gin.Context) {
 	return func(c *gin.Context) {
-		claims := jwt.ExtractClaims(c)
-		log.Printf("NoRoute claims: %#v\n", claims)
+		log.Println("NoRoute: Page not found")
 		c.JSON(404, gin.H{"code": "PAGE_NOT_FOUND", "message": "Page not found"})
 	}
 }
