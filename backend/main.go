@@ -16,21 +16,35 @@ import (
 type User struct {
 	gorm.Model
 
-	Name     string `gorm:"type:varchar(40);unique" json:"name,omitempty" form:"name,omitempty"`
-	Password string `gorm:"size:255" json:"password,omitempty" form:"password,omitempty"`
-	Email    string `gorm:"type:varchar(40);unique" json:"email" form:"email,omitempty"`
+	Name     string `gorm:"type:varchar(40);unique;not null" json:"name,omitempty" form:"name,omitempty"`
+	Password string `gorm:"size:255;not null" json:"password,omitempty" form:"password,omitempty"`
+	Email    string `gorm:"type:varchar(40);unique;not null" json:"email" form:"email,omitempty"`
 	// Add relationships
-	OwnedGroups []Group `gorm:"foreignKey:OwnerRefer"`
-	Groups      []Group `gorm:"many2many:user_groups;"`
+	OwnedGroups     []Group   `gorm:"foreignKey:OwnerRefer"`
+	Groups          []Group   `gorm:"many2many:user_groups;"`
+	CreatedExpenses []Expense `gorm:"foreignKey:CreatedByID"`
+	SharedExpenses  []Expense `gorm:"many2many:user_expenses;"`
 }
 
 type Group struct {
 	gorm.Model
 
-	Name       string `gorm:"type:varchar(40)" json:"name"`
-	OwnerRefer uint
-	Owner      User   `gorm:"foreignKey:OwnerRefer;constraint:OnDelete:CASCADE;"`
-	Members    []User `gorm:"many2many:user_groups;"`
+	Name       string    `gorm:"type:varchar(40);not null" json:"name" form:"name"`
+	OwnerRefer uint      `gorm:"not null" json:"owner_id" form:"owner_id"`
+	Owner      User      `gorm:"foreignKey:OwnerRefer;constraint:OnDelete:CASCADE;"`
+	Members    []User    `gorm:"many2many:user_groups;"`
+	Expenses   []Expense `gorm:"foreignKey:GroupID"`
+}
+
+type Expense struct {
+	gorm.Model
+
+	Amount      float64 `gorm:"not null" json:"amount" form:"amount"`
+	GroupID     uint    `gorm:"not null" json:"group_id" form:"group_id"`
+	Group       Group   `gorm:"constraint:OnDelete:CASCADE;"`
+	CreatedByID uint    `gorm:"not null" json:"created_by_id" form:"created_by_id"`
+	CreatedBy   User    `gorm:"constraint:OnDelete:CASCADE;"`
+	Users       []User  `gorm:"many2many:user_expenses;"`
 }
 
 // makePasswordHash generates a password hash
@@ -51,7 +65,7 @@ func dbInit() (*gorm.DB, error) {
 	}
 
 	// Migrate the schema
-	db.AutoMigrate(&User{}, &Group{})
+	db.AutoMigrate(&User{}, &Group{}, &Expense{})
 
 	// Seed User
 	{
@@ -223,8 +237,9 @@ func main() {
 
 	r.POST("/group", func(c *gin.Context) {
 		type CreateGroupRequest struct {
-			Name    string `json:"name" binding:"required"`
-			OwnerID uint   `json:"owner_id" binding:"required"`
+			Name      string `json:"name" binding:"required"`
+			OwnerID   uint   `json:"owner_id" binding:"required"`
+			MemberIDs []uint `json:"member_ids"` // Optional member IDs
 		}
 
 		var req CreateGroupRequest
@@ -244,11 +259,32 @@ func main() {
 			return
 		}
 
+		// Initialize members with owner
+		members := []User{owner}
+
+		// Add additional members if provided
+		if len(req.MemberIDs) > 0 {
+			var additionalMembers []User
+			if result := db.Find(&additionalMembers, req.MemberIDs); result.Error != nil || len(additionalMembers) != len(req.MemberIDs) {
+				c.JSON(http.StatusBadRequest, gin.H{
+					"message": "One or more member IDs are invalid",
+				})
+				return
+			}
+
+			// Add members, ensuring we don't add the owner twice
+			for _, member := range additionalMembers {
+				if member.ID != owner.ID {
+					members = append(members, member)
+				}
+			}
+		}
+
 		// Create group
 		group := Group{
 			Name:       req.Name,
 			OwnerRefer: req.OwnerID,
-			Members:    []User{owner}, // Add owner as a member too
+			Members:    members,
 		}
 
 		if err := db.Create(&group).Error; err != nil {
@@ -261,9 +297,125 @@ func main() {
 		c.JSON(http.StatusCreated, gin.H{
 			"message": "Group created successfully",
 			"group": gin.H{
-				"id":       group.ID,
-				"name":     group.Name,
-				"owner_id": group.OwnerRefer,
+				"id":           group.ID,
+				"name":         group.Name,
+				"owner_id":     group.OwnerRefer,
+				"member_count": len(members),
+			},
+		})
+	})
+
+	r.POST("/expense", func(c *gin.Context) {
+		type CreateExpenseRequest struct {
+			Amount      float64 `json:"amount" binding:"required"`
+			GroupID     uint    `json:"group_id" binding:"required"`
+			CreatedByID uint    `json:"created_by_id" binding:"required"`
+			UserIDs     []uint  `json:"user_ids"`
+		}
+
+		var req CreateExpenseRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"message": "Invalid request. Amount, group ID, and creator ID are required",
+				"error":   err.Error(),
+			})
+			return
+		}
+
+		// Verify group exists
+		var group Group
+		if result := db.Preload("Members").First(&group, "id = ?", req.GroupID); result.Error != nil {
+			c.JSON(http.StatusNotFound, gin.H{
+				"message": "Group not found",
+			})
+			return
+		}
+
+		// Verify creator exists and is a member of the group
+		var creator User
+		if result := db.First(&creator, "id = ?", req.CreatedByID); result.Error != nil {
+			c.JSON(http.StatusNotFound, gin.H{
+				"message": "Expense creator not found",
+			})
+			return
+		}
+
+		creatorIsMember := false
+		for _, member := range group.Members {
+			if member.ID == creator.ID {
+				creatorIsMember = true
+				break
+			}
+		}
+
+		if !creatorIsMember {
+			c.JSON(http.StatusForbidden, gin.H{
+				"message": "Expense creator must be a member of the group",
+			})
+			return
+		}
+
+		// Deduplicate UserIDs
+		userIDMap := make(map[uint]bool)
+		var uniqueUserIDs []uint
+		for _, id := range req.UserIDs {
+			if _, exists := userIDMap[id]; !exists {
+				userIDMap[id] = true
+				uniqueUserIDs = append(uniqueUserIDs, id)
+			}
+		}
+
+		var users []User
+		// Only validate users if UserIDs are provided
+		if len(uniqueUserIDs) > 0 {
+			if result := db.Find(&users, uniqueUserIDs); result.Error != nil || len(users) != len(uniqueUserIDs) {
+				c.JSON(http.StatusBadRequest, gin.H{
+					"message": "One or more users not found",
+				})
+				return
+			}
+
+			// Verify all users are members of the group
+			for _, user := range users {
+				isMember := false
+				for _, member := range group.Members {
+					if member.ID == user.ID {
+						isMember = true
+						break
+					}
+				}
+				if !isMember {
+					c.JSON(http.StatusForbidden, gin.H{
+						"message": fmt.Sprintf("User %d is not a member of the group", user.ID),
+					})
+					return
+				}
+			}
+		}
+
+		// Create expense
+		expense := Expense{
+			Amount:      req.Amount,
+			GroupID:     req.GroupID,
+			CreatedByID: req.CreatedByID,
+			Users:       users,
+		}
+
+		if err := db.Create(&expense).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "Failed to create expense",
+			})
+			return
+		}
+
+		c.JSON(http.StatusCreated, gin.H{
+			"message": "Expense created successfully",
+			"expense": gin.H{
+				"id":         expense.ID,
+				"amount":     expense.Amount,
+				"group_id":   expense.GroupID,
+				"created_by": expense.CreatedByID,
+				"user_ids":   uniqueUserIDs,
 			},
 		})
 	})
