@@ -355,10 +355,20 @@ func main() {
 			return
 		}
 
+		// Deduplicate UserIDs
+		userIDMap := make(map[uint]bool)
+		var uniqueUserIDs []uint
+		for _, id := range req.UserIDs {
+			if _, exists := userIDMap[id]; !exists {
+				userIDMap[id] = true
+				uniqueUserIDs = append(uniqueUserIDs, id)
+			}
+		}
+
 		var users []User
 		// Only validate users if UserIDs are provided
-		if len(req.UserIDs) > 0 {
-			if result := db.Find(&users, req.UserIDs); result.Error != nil || len(users) != len(req.UserIDs) {
+		if len(uniqueUserIDs) > 0 {
+			if result := db.Find(&users, uniqueUserIDs); result.Error != nil || len(users) != len(uniqueUserIDs) {
 				c.JSON(http.StatusBadRequest, gin.H{
 					"message": "One or more users not found",
 				})
