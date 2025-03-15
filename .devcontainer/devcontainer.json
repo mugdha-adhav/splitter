@@ -1,0 +1,19 @@
+{
+    "name": "Splitter Development",
+    "dockerFile": "Dockerfile",
+    "forwardPorts": [5173],
+    "features": {
+        "ghcr.io/devcontainers/features/go:1": {}
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "svelte.svelte-vscode",
+                "dbaeumer.vscode-eslint",
+                "esbenp.prettier-vscode",
+                "golang.go"
+            ]
+        }
+    },
+    "postCreateCommand": "cd frontend && npm install"
+} 
